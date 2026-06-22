@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 import numpy as np
 import cv2
 from fastapi import APIRouter, File, UploadFile, HTTPException
@@ -7,6 +8,8 @@ from fastapi.responses import FileResponse
 import config
 from app.core.indexer import get_face_model, extract_embedding
 from app.core.searcher import FaceSearcher
+
+_STATIC_DIR = Path(__file__).parent.parent.parent / "static"
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +21,7 @@ face_model = get_face_model()
 
 @router.get("/")
 def index():
-    return FileResponse(config.STATIC_DIR / "index.html")
+    return FileResponse(_STATIC_DIR / "index.html")
 
 
 @router.post("/search")
@@ -47,3 +50,15 @@ def reload_index():
 def health():
     count = int(len(searcher.image_ids)) if searcher.image_ids is not None else 0
     return {"status": "ok", "indexed_faces": count}
+
+
+@router.get("/photo")
+def serve_photo(path: str):
+    p = Path(path).resolve()
+    try:
+        p.relative_to(config.PHOTOS_DIR)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Access denied")
+    if not p.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(str(p))

@@ -45,7 +45,6 @@ PHOTOS_DIR = Path(_photos_raw).resolve()
 
 # ── APP ARTIFACTS (all under ROOT_DIR) ───────────────────────────────────────
 DATA_DIR         = _resolve(_env('DATA_DIR',         _yaml['paths']['data_dir']),         ROOT_DIR)
-STATIC_DIR       = _resolve(_env('STATIC_DIR',       _yaml['paths']['static_dir']),       ROOT_DIR)
 INDEX_PATH       = _resolve(_env('INDEX_PATH',       _yaml['paths']['index_path']),       ROOT_DIR)
 TOKEN_CACHE_PATH = _resolve(_env('TOKEN_CACHE_PATH', _yaml['paths']['token_cache_path']), ROOT_DIR)
 

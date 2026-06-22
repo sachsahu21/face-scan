@@ -7,7 +7,7 @@
 
 ---
 
-## Step 1 — Create a Virtual Environment
+## Step 1 — Clone & Create Virtual Environment
 
 ```powershell
 cd C:\Users\ISSUser\Desktop\Sachin\git\face-scan
@@ -26,24 +26,25 @@ venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-> InsightFace will download the `buffalo_l` face model (~300 MB) on first run. This is a one-time download.
+> InsightFace downloads the `buffalo_l` face model (~300 MB) on first run — one-time only.
 
 ---
 
-## Step 3 — Configure
+## Step 3 — Configure Paths
 
-Open **`config/config.yaml`** and set your paths:
+Open **`config/config.yaml`** and set:
 
 ```yaml
 paths:
-  root_dir:   "C:\\Users\\ISSUser\\Desktop\\Sachin\\hdd\\face_scan_artifacts"
-  photos_dir: "C:\\path\\to\\your\\photos"   # ← REQUIRED
+  root_dir:   "C:\\path\\to\\artifacts"    # where index + cache are stored
+  photos_dir: "C:\\path\\to\\your\\photos" # REQUIRED — your photo collection
 ```
 
-Optionally create a `.env` file to override values without editing the yaml:
+Or use a `.env` file to override without editing yaml:
 
 ```powershell
 Copy-Item .env.example .env
+# then edit .env and set ROOT_DIR and PHOTOS_DIR
 ```
 
 ---
@@ -54,9 +55,9 @@ Copy-Item .env.example .env
 python scripts/build_index.py
 ```
 
-This scans all photos in `photos_dir`, detects faces, and saves the index to `data/face_index.npz`.
+Scans all photos, detects faces, saves index to `data/face_index.npz`.
 
-To re-index from scratch (e.g. after deleting photos):
+To rebuild from scratch:
 
 ```powershell
 python scripts/build_index.py --force
@@ -74,22 +75,50 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 ## Step 6 — Open the Web UI
 
+**Same machine:**
 ```
 http://localhost:8000
 ```
 
-Upload any photo containing a face → the app returns the best matching photos from your library.
+**From mobile on same WiFi** — find your PC's IP:
+```powershell
+ipconfig
+# look for IPv4 Address under your WiFi adapter, e.g. 192.168.1.45
+```
+Then on mobile open:
+```
+http://192.168.1.45:8000
+```
+
+---
+
+## Step 7 — Share Outside Your Network (ngrok)
+
+Install ngrok once:
+```powershell
+winget install Ngrok.Ngrok
+```
+
+Sign up free at [ngrok.com](https://ngrok.com), copy your authtoken, then:
+```powershell
+ngrok config add-authtoken YOUR_TOKEN_HERE
+```
+
+Run alongside uvicorn in a separate terminal:
+```powershell
+ngrok http 8000
+```
+
+Share the `https://xxx.ngrok-free.app` URL. To skip the ngrok interstitial page append:
+```
+?ngrok-skip-browser-warning=true
+```
 
 ---
 
 ## Switching Photo Collections
 
-Just update `photos_dir` in `config/config.yaml` and re-run the indexer:
-
-```yaml
-paths:
-  photos_dir: "D:\\Photos\\NewAlbum"
-```
+Update `photos_dir` in `config/config.yaml` and re-index:
 
 ```powershell
 python scripts/build_index.py --force
@@ -99,10 +128,10 @@ python scripts/build_index.py --force
 
 ## OneDrive Setup (optional)
 
-To use OneDrive as the photo source instead of local files:
+To pull photos from OneDrive instead of local disk:
 
 1. Register an app at [portal.azure.com](https://portal.azure.com) → Azure AD → App registrations
-2. Add API permission: **Microsoft Graph → Files.Read (delegated)**
+2. Add permission: **Microsoft Graph → Files.Read (delegated)**
 3. Set in `config/config.yaml`:
    ```yaml
    source:
@@ -115,7 +144,7 @@ To use OneDrive as the photo source instead of local files:
    ```powershell
    python scripts/onedrive_auth.py
    ```
-5. Build the index and start the server as normal.
+5. Build index and start server as normal.
 
 ---
 
@@ -124,11 +153,12 @@ To use OneDrive as the photo source instead of local files:
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/` | Web UI |
-| `POST` | `/search` | Upload a face image, get matches |
-| `POST` | `/reload-index` | Hot-reload the index without restarting |
+| `POST` | `/search` | Upload a face photo, get matches |
+| `POST` | `/reload-index` | Hot-reload index without restarting |
 | `GET` | `/health` | Server status + indexed face count |
+| `GET` | `/photo?path=...` | Serve a matched photo by path |
 
-### Example — search via curl
+### Search via curl
 
 ```powershell
 curl -X POST http://localhost:8000/search -F "file=@C:\path\to\photo.jpg"
@@ -142,6 +172,8 @@ curl -X POST http://localhost:8000/search -F "file=@C:\path\to\photo.jpg"
 |---|---|
 | `photos_dir is not configured` | Set `paths.photos_dir` in `config/config.yaml` |
 | `No index found` | Run `python scripts/build_index.py` first |
-| `No face detected` | The uploaded image has no detectable face |
+| `No face detected` | Uploaded image has no detectable face |
+| `Directory 'static' does not exist` | Run uvicorn from the project root folder |
 | `OneDrive not authenticated` | Run `python scripts/onedrive_auth.py` |
-| InsightFace download slow | One-time download of ~300 MB — wait for it to finish |
+| ngrok shows warning page | Add `?ngrok-skip-browser-warning=true` to the URL |
+| InsightFace download slow | One-time ~300 MB download — wait for it |

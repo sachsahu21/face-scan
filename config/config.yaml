@@ -16,12 +16,11 @@
 #              Override in .env:  PHOTOS_DIR=D:\Photos\2024
 # -------------------------------------------------------------
 paths:
-  root_dir: ""
-  photos_dir: ""
+  root_dir: "C:\\Users\\ISSUser\\Desktop\\Sachin\\hdd\\face_scan_artifacts"
+  photos_dir: "C:\\Users\\ISSUser\\Desktop\\Sachin\\hdd\\pic\\Sachin\\sach_unorganized\\facebook\\Ifly 2022\\your_facebook_activity\\posts\\media\\your_posts"
 
   # Sub-paths under root_dir (relative, or absolute to override)
   data_dir:         data
-  static_dir:       static
   index_path:       data/face_index.npz
   token_cache_path: data/.onedrive_token_cache.bin
 
