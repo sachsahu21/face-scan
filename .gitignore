@@ -1,12 +1,16 @@
-# Environment
+# ── Secrets & local config ────────────────────────────────────────────────────
 .env
-.onedrive_token_cache.bin
+config/*.local.yaml
 
-# Index data
+# ── App artifacts (index, token cache) ───────────────────────────────────────
 data/
 *.npz
 
-# Python
+# ── Personal photos ───────────────────────────────────────────────────────────
+photos/
+projects/
+
+# ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
@@ -17,15 +21,21 @@ env/
 dist/
 build/
 
-# Photos (don't commit personal photos)
-photos/
-
-# IDE / tools
+# ── AI tool config (auto-generated, machine-specific) ────────────────────────
+.agents/
 .jetro/
 .cursor/
+.claude/
+.github/copilot-instructions.md
+.mcp.json
+.windsurfrules
+AGENT.md
+CLAUDE.md
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 
-# OS
+# ── OS ───────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
