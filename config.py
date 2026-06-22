@@ -21,13 +21,24 @@ def _resolve(env_key: str, default_relative: str) -> Path:
 
 
 # ---------------------------------------------------------------------------
-# FOLDER LAYOUT  (all under ROOT_DIR unless overridden in .env)
+# SOURCE PHOTOS  — completely independent from ROOT_DIR.
+# This path will keep changing as you point it to different photo collections.
+# Must be set in .env. No default — will raise clearly if missing.
 # ---------------------------------------------------------------------------
-PHOTOS_DIR        = _resolve('PHOTOS_DIR',        'photos')          # source photos
+_photos = os.getenv('PHOTOS_DIR', '')
+if not _photos:
+    raise EnvironmentError(
+        "PHOTOS_DIR is not set. Add it to your .env file.\n"
+        "Example:  PHOTOS_DIR=D:\\MyPhotos\\2024"
+    )
+PHOTOS_DIR = Path(_photos).resolve()
+
+# ---------------------------------------------------------------------------
+# APP ARTIFACTS  (all under ROOT_DIR — these don't change)
+# ---------------------------------------------------------------------------
 DATA_DIR          = _resolve('DATA_DIR',           'data')            # index + cache
 STATIC_DIR        = _resolve('STATIC_DIR',         'static')          # web UI assets
 
-# Derived artifact paths (inside DATA_DIR)
 INDEX_PATH        = _resolve('INDEX_PATH',         'data/face_index.npz')
 TOKEN_CACHE_PATH  = _resolve('TOKEN_CACHE_PATH',   'data/.onedrive_token_cache.bin')
 
