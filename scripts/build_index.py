@@ -30,7 +30,7 @@ if config.SOURCE_TYPE == 'onedrive':
         folder=config.ONEDRIVE_FOLDER,
     )
 else:
-    source = LocalPhotoSource(config.LOCAL_PHOTOS_DIR)
+    source = LocalPhotoSource(config.PHOTOS_DIR)
 
 total = build_index(source, config.INDEX_PATH, force=args.force)
 print(f"\nDone. {total} faces indexed → {config.INDEX_PATH}")
