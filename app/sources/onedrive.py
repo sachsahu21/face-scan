@@ -10,13 +10,18 @@ Setup (one-time):
 """
 
 import os
+import sys
 import cv2
 import numpy as np
+from pathlib import Path
 from typing import List
 
 from .base import PhotoSource
 
-TOKEN_CACHE_FILE = '.onedrive_token_cache.bin'
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+import config as _config
+
+TOKEN_CACHE_FILE = _config.TOKEN_CACHE_PATH
 GRAPH_BASE = 'https://graph.microsoft.com/v1.0'
 
 

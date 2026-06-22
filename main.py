@@ -4,7 +4,6 @@ FastAPI server — face search API.
 Run:
   uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 """
-import io
 import logging
 import numpy as np
 import cv2
@@ -23,12 +22,12 @@ app = FastAPI(title="Face Scan")
 searcher = FaceSearcher(config.INDEX_PATH, config.SEARCH_THRESHOLD, config.MAX_RESULTS)
 face_model = get_face_model()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=config.STATIC_DIR), name="static")
 
 
 @app.get("/")
 def index():
-    return FileResponse("static/index.html")
+    return FileResponse(f"{config.STATIC_DIR}/index.html")
 
 
 @app.post("/search")

@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
 
-TOKEN_CACHE_FILE = '.onedrive_token_cache.bin'
+TOKEN_CACHE_FILE = config.TOKEN_CACHE_PATH
 
 try:
     import msal
