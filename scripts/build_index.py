@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
-from app.indexer import build_index
+from app.core.indexer import build_index
 from app.sources.local import LocalPhotoSource
 from app.sources.onedrive import OneDrivePhotoSource
 
@@ -28,6 +28,7 @@ if config.SOURCE_TYPE == 'onedrive':
         client_id=config.ONEDRIVE_CLIENT_ID,
         tenant_id=config.ONEDRIVE_TENANT_ID,
         folder=config.ONEDRIVE_FOLDER,
+        token_cache_path=config.TOKEN_CACHE_PATH,
     )
 else:
     source = LocalPhotoSource(config.PHOTOS_DIR)

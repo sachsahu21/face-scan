@@ -4,7 +4,7 @@ import cv2
 from pathlib import Path
 from typing import Optional
 
-from .sources.base import PhotoSource
+from app.sources.base import PhotoSource
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +16,7 @@ def get_face_model():
         model.prepare(ctx_id=0, det_size=(640, 640))
         return model
     except ImportError:
-        raise ImportError(
-            "Missing dependency. Run:\n  pip install insightface onnxruntime"
-        )
+        raise ImportError("Run:  pip install insightface onnxruntime")
 
 
 def extract_embedding(model, img: np.ndarray) -> Optional[np.ndarray]:
@@ -26,29 +24,27 @@ def extract_embedding(model, img: np.ndarray) -> Optional[np.ndarray]:
     faces = model.get(img)
     if not faces:
         return None
-    largest = max(
-        faces,
-        key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1])
-    )
+    largest = max(faces, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
     return largest.normed_embedding  # already L2-normalized
 
 
-def build_index(source: PhotoSource, index_path: str, force: bool = False) -> int:
+def build_index(source: PhotoSource, index_path: Path, force: bool = False) -> int:
     """
-    Generate face embeddings for all images in source and save to disk.
-    Incremental: skips images already in the index unless force=True.
+    Build or incrementally update the face embeddings index.
+    Skips images already in the index unless force=True.
+    Returns total number of indexed faces.
     """
-    path = Path(index_path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    index_path = Path(index_path)
+    index_path.parent.mkdir(parents=True, exist_ok=True)
 
     embeddings: list = []
     image_ids: list = []
 
-    if path.exists() and not force:
-        data = np.load(path, allow_pickle=True)
+    if index_path.exists() and not force:
+        data = np.load(index_path, allow_pickle=True)
         embeddings = list(data['embeddings'])
         image_ids = list(data['image_ids'])
-        logger.info(f"Existing index loaded: {len(image_ids)} faces")
+        logger.info(f"Loaded existing index: {len(image_ids)} faces")
 
     existing = set(image_ids)
     all_images = source.list_images()
@@ -81,10 +77,10 @@ def build_index(source: PhotoSource, index_path: str, force: bool = False) -> in
 
     if embeddings:
         np.savez(
-            path,
+            index_path,
             embeddings=np.array(embeddings, dtype=np.float32),
             image_ids=np.array(image_ids),
         )
-        logger.info(f"Index saved → {path} ({len(image_ids)} total faces)")
+        logger.info(f"Index saved → {index_path} ({len(image_ids)} total faces)")
 
     return len(image_ids)

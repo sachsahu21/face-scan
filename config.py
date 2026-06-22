@@ -1,68 +1,65 @@
-from dotenv import load_dotenv
-from pathlib import Path
+"""
+Configuration loader.
+
+Priority (highest to lowest):
+  1. Environment variables / .env file
+  2. config/config.yaml
+"""
 import os
+from pathlib import Path
+import yaml
+from dotenv import load_dotenv
 
 load_dotenv()
 
-# ---------------------------------------------------------------------------
-# ROOT DIRECTORY
-# All subfolders and artifacts live under ROOT_DIR.
-# Defaults to the project folder. Override in .env to point elsewhere,
-# e.g. an external drive:  ROOT_DIR=D:\FaceData
-# ---------------------------------------------------------------------------
-ROOT_DIR = Path(os.getenv('ROOT_DIR', Path(__file__).parent)).resolve()
+# ── Load YAML ────────────────────────────────────────────────────────────────
+_YAML_PATH = Path(__file__).parent / 'config' / 'config.yaml'
+with open(_YAML_PATH) as f:
+    _yaml = yaml.safe_load(f)
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+def _env(key: str, yaml_val) -> str:
+    """Return env var if set, otherwise the yaml value as a string."""
+    return os.getenv(key, str(yaml_val) if yaml_val is not None else '')
 
 
-def _resolve(env_key: str, default_relative: str) -> Path:
-    """Return an absolute Path: use env value if set, else ROOT_DIR / default."""
-    val = os.getenv(env_key, '')
-    p = Path(val) if val else ROOT_DIR / default_relative
-    return p if p.is_absolute() else ROOT_DIR / p
+def _resolve(raw: str, root: Path) -> Path:
+    """Resolve a path: absolute → use as-is, relative → anchor to root."""
+    p = Path(raw)
+    return p.resolve() if p.is_absolute() else (root / p).resolve()
 
 
-# ---------------------------------------------------------------------------
-# SOURCE PHOTOS  — completely independent from ROOT_DIR.
-# This path will keep changing as you point it to different photo collections.
-# Must be set in .env. No default — will raise clearly if missing.
-# ---------------------------------------------------------------------------
-_photos = os.getenv('PHOTOS_DIR', '')
-if not _photos:
+# ── ROOT DIR ─────────────────────────────────────────────────────────────────
+_root_raw = _env('ROOT_DIR', _yaml['paths']['root_dir'])
+ROOT_DIR = Path(_root_raw).resolve() if _root_raw else Path(__file__).parent.resolve()
+
+# ── PHOTOS DIR (independent of ROOT_DIR) ─────────────────────────────────────
+_photos_raw = _env('PHOTOS_DIR', _yaml['paths']['photos_dir'])
+if not _photos_raw:
     raise EnvironmentError(
-        "PHOTOS_DIR is not set. Add it to your .env file.\n"
-        "Example:  PHOTOS_DIR=D:\\MyPhotos\\2024"
+        "photos_dir is not configured.\n"
+        "Set it in config/config.yaml  →  paths.photos_dir: D:\\MyPhotos\n"
+        "  or in .env                  →  PHOTOS_DIR=D:\\MyPhotos"
     )
-PHOTOS_DIR = Path(_photos).resolve()
+PHOTOS_DIR = Path(_photos_raw).resolve()
 
-# ---------------------------------------------------------------------------
-# APP ARTIFACTS  (all under ROOT_DIR — these don't change)
-# ---------------------------------------------------------------------------
-DATA_DIR          = _resolve('DATA_DIR',           'data')            # index + cache
-STATIC_DIR        = _resolve('STATIC_DIR',         'static')          # web UI assets
+# ── APP ARTIFACTS (all under ROOT_DIR) ───────────────────────────────────────
+DATA_DIR         = _resolve(_env('DATA_DIR',         _yaml['paths']['data_dir']),         ROOT_DIR)
+STATIC_DIR       = _resolve(_env('STATIC_DIR',       _yaml['paths']['static_dir']),       ROOT_DIR)
+INDEX_PATH       = _resolve(_env('INDEX_PATH',       _yaml['paths']['index_path']),       ROOT_DIR)
+TOKEN_CACHE_PATH = _resolve(_env('TOKEN_CACHE_PATH', _yaml['paths']['token_cache_path']), ROOT_DIR)
 
-INDEX_PATH        = _resolve('INDEX_PATH',         'data/face_index.npz')
-TOKEN_CACHE_PATH  = _resolve('TOKEN_CACHE_PATH',   'data/.onedrive_token_cache.bin')
+# ── SOURCE ────────────────────────────────────────────────────────────────────
+SOURCE_TYPE        = _env('SOURCE_TYPE',        _yaml['source']['type'])
+ONEDRIVE_CLIENT_ID = _env('ONEDRIVE_CLIENT_ID', _yaml['source']['onedrive']['client_id'])
+ONEDRIVE_TENANT_ID = _env('ONEDRIVE_TENANT_ID', _yaml['source']['onedrive']['tenant_id'])
+ONEDRIVE_FOLDER    = _env('ONEDRIVE_FOLDER',    _yaml['source']['onedrive']['folder'])
 
-# ---------------------------------------------------------------------------
-# PHOTO SOURCE
-# SOURCE_TYPE = 'local'     → read from PHOTOS_DIR on disk
-# SOURCE_TYPE = 'onedrive'  → read from OneDrive via Microsoft Graph API
-# ---------------------------------------------------------------------------
-SOURCE_TYPE = os.getenv('SOURCE_TYPE', 'local')
+# ── SEARCH ────────────────────────────────────────────────────────────────────
+SEARCH_THRESHOLD = float(_env('SEARCH_THRESHOLD', _yaml['search']['threshold']))
+MAX_RESULTS      = int(_env('MAX_RESULTS',        _yaml['search']['max_results']))
 
-# OneDrive credentials (only needed when SOURCE_TYPE=onedrive)
-ONEDRIVE_CLIENT_ID = os.getenv('ONEDRIVE_CLIENT_ID', '')
-ONEDRIVE_TENANT_ID = os.getenv('ONEDRIVE_TENANT_ID', 'common')
-ONEDRIVE_FOLDER    = os.getenv('ONEDRIVE_FOLDER',    '/Pictures')
-
-# ---------------------------------------------------------------------------
-# SEARCH
-# ---------------------------------------------------------------------------
-SEARCH_THRESHOLD = float(os.getenv('SEARCH_THRESHOLD', '0.35'))   # 0.0–1.0; higher = stricter
-MAX_RESULTS      = int(os.getenv('MAX_RESULTS',      '20'))
-
-# ---------------------------------------------------------------------------
-# SERVER
-# ---------------------------------------------------------------------------
-HOST        = os.getenv('HOST', '0.0.0.0')
-PORT        = int(os.getenv('PORT', '8000'))
-TUNNEL_MODE = os.getenv('TUNNEL_MODE', 'false').lower() == 'true'  # expose via ngrok
+# ── SERVER ────────────────────────────────────────────────────────────────────
+HOST        = _env('HOST', _yaml['server']['host'])
+PORT        = int(_env('PORT', _yaml['server']['port']))
+TUNNEL_MODE = _env('TUNNEL_MODE', _yaml['server']['tunnel_mode']).lower() in ('true', '1', 'yes')

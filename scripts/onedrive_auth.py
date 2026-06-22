@@ -1,6 +1,6 @@
 """
 One-time OneDrive OAuth authentication.
-Run this once before using SOURCE_TYPE=onedrive.
+Run this once before using source.type=onedrive.
 
 Usage:
   python scripts/onedrive_auth.py
@@ -13,8 +13,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import config
 
-TOKEN_CACHE_FILE = config.TOKEN_CACHE_PATH
-
 try:
     import msal
 except ImportError:
@@ -22,7 +20,7 @@ except ImportError:
     sys.exit(1)
 
 if not config.ONEDRIVE_CLIENT_ID:
-    print("ERROR: Set ONEDRIVE_CLIENT_ID in your .env file first.")
+    print("ERROR: onedrive.client_id not set in config/config.yaml (or ONEDRIVE_CLIENT_ID in .env)")
     sys.exit(1)
 
 cache = msal.SerializableTokenCache()
@@ -38,8 +36,10 @@ webbrowser.open(flow['verification_uri'])
 
 result = app.acquire_token_by_device_flow(flow)
 if 'access_token' in result:
-    open(TOKEN_CACHE_FILE, 'w').write(cache.serialize())
-    print("\nAuthenticated successfully. Token cached.")
+    cache_path = Path(config.TOKEN_CACHE_PATH)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(cache.serialize())
+    print(f"\nAuthenticated. Token cached → {cache_path}")
 else:
     print(f"\nAuthentication failed: {result.get('error_description')}")
     sys.exit(1)

@@ -3,34 +3,31 @@ OneDrive photo source via Microsoft Graph API.
 
 Setup (one-time):
   1. Register an app at portal.azure.com → Azure AD → App registrations
-  2. Add redirect URI: http://localhost:8080
-  3. Add API permission: Microsoft Graph → Files.Read (delegated)
-  4. Copy Client ID and Tenant ID into .env
-  5. Run: python scripts/onedrive_auth.py   (authenticates once, caches token)
+  2. Add API permission: Microsoft Graph → Files.Read (delegated)
+  3. Set client_id in config/config.yaml or ONEDRIVE_CLIENT_ID in .env
+  4. Run: python scripts/onedrive_auth.py
 """
-
 import os
-import sys
 import cv2
 import numpy as np
 from pathlib import Path
 from typing import List
 
-from .base import PhotoSource
+from app.sources.base import PhotoSource
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-import config as _config
-
-TOKEN_CACHE_FILE = _config.TOKEN_CACHE_PATH
 GRAPH_BASE = 'https://graph.microsoft.com/v1.0'
 
 
 class OneDrivePhotoSource(PhotoSource):
-    def __init__(self, client_id: str, tenant_id: str, folder: str):
+    def __init__(self, client_id: str, tenant_id: str, folder: str, token_cache_path: Path):
         if not client_id:
-            raise ValueError("ONEDRIVE_CLIENT_ID not set in .env")
-
+            raise ValueError(
+                "OneDrive client_id not set.\n"
+                "Add it to config/config.yaml → source.onedrive.client_id\n"
+                "or set ONEDRIVE_CLIENT_ID in .env"
+            )
         self.folder = folder
+        self.token_cache_path = Path(token_cache_path)
         self._token = None
 
         try:
@@ -44,8 +41,8 @@ class OneDrivePhotoSource(PhotoSource):
         import msal
 
         cache = msal.SerializableTokenCache()
-        if os.path.exists(TOKEN_CACHE_FILE):
-            cache.deserialize(open(TOKEN_CACHE_FILE).read())
+        if self.token_cache_path.exists():
+            cache.deserialize(self.token_cache_path.read_text())
 
         self._app = msal.PublicClientApplication(
             client_id,
@@ -62,12 +59,14 @@ class OneDrivePhotoSource(PhotoSource):
                 return
 
         raise RuntimeError(
-            "OneDrive not authenticated. Run: python scripts/onedrive_auth.py"
+            "OneDrive not authenticated.\n"
+            "Run: python scripts/onedrive_auth.py"
         )
 
     def _save_cache(self, cache):
         if cache.has_state_changed:
-            open(TOKEN_CACHE_FILE, 'w').write(cache.serialize())
+            self.token_cache_path.parent.mkdir(parents=True, exist_ok=True)
+            self.token_cache_path.write_text(cache.serialize())
 
     def _headers(self):
         return {'Authorization': f'Bearer {self._token}'}
@@ -84,8 +83,7 @@ class OneDrivePhotoSource(PhotoSource):
             r.raise_for_status()
             data = r.json()
             for item in data.get('value', []):
-                mime = item.get('file', {}).get('mimeType', '')
-                if mime.startswith('image/'):
+                if item.get('file', {}).get('mimeType', '').startswith('image/'):
                     items.append(item['id'])
             url = data.get('@odata.nextLink')
             params = None
@@ -100,8 +98,7 @@ class OneDrivePhotoSource(PhotoSource):
             headers=self._headers(),
         )
         r.raise_for_status()
-        arr = np.frombuffer(r.content, np.uint8)
-        return cv2.imdecode(arr, cv2.IMREAD_COLOR)
+        return cv2.imdecode(np.frombuffer(r.content, np.uint8), cv2.IMREAD_COLOR)
 
     def get_display_url(self, image_id: str) -> str:
         import requests

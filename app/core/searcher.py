@@ -7,14 +7,14 @@ logger = logging.getLogger(__name__)
 
 
 class FaceSearcher:
-    def __init__(self, index_path: str, threshold: float = 0.35, max_results: int = 20):
+    def __init__(self, index_path: Path, threshold: float = 0.35, max_results: int = 20):
         self.threshold = threshold
         self.max_results = max_results
         self.embeddings: Optional[np.ndarray] = None
         self.image_ids: Optional[np.ndarray] = None
         self._load(index_path)
 
-    def _load(self, index_path: str):
+    def _load(self, index_path: Path):
         path = Path(index_path)
         if not path.exists():
             raise FileNotFoundError(
@@ -26,19 +26,19 @@ class FaceSearcher:
         self.image_ids = data['image_ids']
         logger.info(f"Searcher ready: {len(self.image_ids)} indexed faces")
 
-    def reload(self, index_path: str):
+    def reload(self, index_path: Path):
         self._load(index_path)
 
     def search(self, query_embedding: np.ndarray) -> List[Dict]:
         """
         Find images containing a face matching query_embedding.
-        Returns list of {image_id, score} sorted by score descending.
-        Scores are cosine similarities (0–1); embeddings are pre-normalized.
+        Returns [{image_id, score}] sorted by score descending.
+        Scores are cosine similarities (0–1).
         """
         if self.embeddings is None or len(self.embeddings) == 0:
             return []
 
-        scores = self.embeddings @ query_embedding  # cosine sim, shape (N,)
+        scores = self.embeddings @ query_embedding
         matched = np.where(scores >= self.threshold)[0]
 
         if len(matched) == 0:
