@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "jetro": {
+      "type": "stdio",
+      "command": "C:\\Users\\ISSUser\\.jetro\\runtime\\node-win32-x64.exe",
+      "args": [
+        "C:\\Users\\ISSUser\\.jetro\\mcp-server\\index.js"
+      ],
+      "env": {
+        "JET_WORKSPACE": "c:\\Users\\ISSUser\\Desktop\\Sachin\\git\\face-scan",
+        "JET_API_URL": "https://api.jetro.ai",
+        "PATH": "C:\\Users\\ISSUser\\.jetro\\runtime;C:\\Windows\\system32;C:\\Windows;C:\\Windows\\System32\\Wbem;C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\;C:\\Windows\\System32\\OpenSSH\\;C:\\Program Files\\Git\\cmd;C:\\Program Files\\nodejs\\;C:\\Users\\ISSUser\\.local\\bin;C:\\Users\\ISSUser\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\ISSUser\\AppData\\Local\\Programs\\Microsoft VS Code\\bin;C:\\Users\\ISSUser\\AppData\\Local\\Python\\bin;C:\\Users\\ISSUser\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin;C:\\Users\\ISSUser\\AppData\\Local\\Programs\\Antigravity\\bin;C:\\Users\\ISSUser\\AppData\\Roaming\\npm;C:\\Users\\ISSUser\\AppData\\Local\\Programs\\Kiro\\bin;C:\\Users\\ISSUser\\AppData\\Local\\Programs\\Antigravity IDE\\bin"
+      }
+    }
+  }
+}
