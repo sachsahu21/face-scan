@@ -1,0 +1,31 @@
+# Environment
+.env
+.onedrive_token_cache.bin
+
+# Index data
+data/
+*.npz
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Photos (don't commit personal photos)
+photos/
+
+# IDE / tools
+.jetro/
+.cursor/
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

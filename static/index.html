@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Face Scan</title>
+  <style>
+    body { font-family: sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+    h1 { font-size: 1.6rem; }
+    input[type=file] { margin: 12px 0; }
+    button { padding: 8px 20px; cursor: pointer; }
+    #results { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 12px; }
+    .card { border: 1px solid #ddd; border-radius: 6px; padding: 8px; text-align: center; width: 160px; }
+    .card img { width: 100%; height: 120px; object-fit: cover; border-radius: 4px; }
+    .score { font-size: 0.8rem; color: #555; margin-top: 4px; }
+    #status { margin-top: 12px; color: #333; }
+  </style>
+</head>
+<body>
+  <h1>Face Scan</h1>
+  <p>Upload a photo containing a face to find matching photos.</p>
+  <input type="file" id="fileInput" accept="image/*" />
+  <button onclick="search()">Search</button>
+  <div id="status"></div>
+  <div id="results"></div>
+
+  <script>
+    async function search() {
+      const file = document.getElementById('fileInput').files[0];
+      if (!file) { alert('Select an image first.'); return; }
+
+      const status = document.getElementById('status');
+      const results = document.getElementById('results');
+      status.textContent = 'Searching…';
+      results.innerHTML = '';
+
+      const form = new FormData();
+      form.append('file', file);
+
+      try {
+        const res = await fetch('/search', { method: 'POST', body: form });
+        const data = await res.json();
+        if (!res.ok) { status.textContent = 'Error: ' + (data.detail || res.statusText); return; }
+
+        status.textContent = `Found ${data.total} match(es).`;
+        data.results.forEach(r => {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.innerHTML = `
+            <img src="${r.image_id}" onerror="this.src=''" />
+            <div class="score">Score: ${r.score.toFixed(3)}</div>
+            <div style="font-size:0.7rem;word-break:break-all">${r.image_id.split('/').pop()}</div>
+          `;
+          results.appendChild(card);
+        });
+      } catch (e) {
+        status.textContent = 'Request failed: ' + e.message;
+      }
+    }
+  </script>
+</body>
+</html>
