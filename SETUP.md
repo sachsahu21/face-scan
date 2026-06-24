@@ -1,28 +1,15 @@
 # Setup & Run Guide
 
-## Prerequisites
-
-- Python 3.9 or later
-- Git
-
 ---
 
-## Step 1 — Clone & Create Virtual Environment
+## First-Time Setup (do once)
+
+### 1 — Create Virtual Environment
 
 ```powershell
 cd C:\Users\ISSUser\Desktop\Sachin\git\face-scan
-
 python -m venv venv
 venv\Scripts\activate
-```
-
-> Run `venv\Scripts\activate` every time you open a new terminal.
-
----
-
-## Step 2 — Install Dependencies
-
-```powershell
 pip install -r requirements.txt
 ```
 
@@ -30,32 +17,26 @@ pip install -r requirements.txt
 
 ---
 
-## Step 3 — Configure Paths
+### 2 — Configure Paths
 
-Open **`config/config.yaml`** and set:
+Open **`config/config.yaml`** and set both values:
 
 ```yaml
 paths:
-  root_dir:   "C:\\path\\to\\artifacts"    # where index + cache are stored
+  root_dir:   "C:\\path\\to\\artifacts"    # where index is stored
   photos_dir: "C:\\path\\to\\your\\photos" # REQUIRED — your photo collection
-```
-
-Or use a `.env` file to override without editing yaml:
-
-```powershell
-Copy-Item .env.example .env
-# then edit .env and set ROOT_DIR and PHOTOS_DIR
 ```
 
 ---
 
-## Step 4 — Build the Face Index
+### 3 — Build the Face Index
 
 ```powershell
+venv\Scripts\activate
 python scripts/build_index.py
 ```
 
-An interactive menu opens:
+Choose **option 1** (Add new photos) to scan and index all faces.
 
 ```
 ║  1 - Add new photos (incremental)    ║
@@ -67,72 +48,70 @@ An interactive menu opens:
 
 | Option | When to use |
 |---|---|
-| 1 | Added new photos to your folder |
-| 2 | Moved/renamed the folder, or something looks wrong |
-| 3 | Deleted photos and want to clean the index |
+| 1 | First run, or added new photos |
+| 2 | Moved/renamed photo folder, or index looks wrong |
+| 3 | Deleted photos — cleans stale entries from index |
 | 4 | Check how many faces are indexed |
 
 ---
 
-## Step 5 — Start the Server
+---
 
+## Daily Run (every time)
+
+**Terminal 1 — start the app:**
 ```powershell
+cd C:\Users\ISSUser\Desktop\Sachin\git\face-scan
+venv\Scripts\activate
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
----
-
-## Step 6 — Open the Web UI
-
-**Same machine:**
+**Open in browser:**
 ```
 http://localhost:8000
 ```
 
-**From mobile on same WiFi** — find your PC's IP:
+---
+
+**Terminal 2 — share outside your network (optional):**
+```powershell
+ngrok http 8000
+```
+Share the `https://xxx.ngrok-free.app?ngrok-skip-browser-warning=true` URL with anyone.
+
+---
+
+## Access from Mobile
+
+**Same WiFi** — find your PC's IP:
 ```powershell
 ipconfig
-# look for IPv4 Address under your WiFi adapter, e.g. 192.168.1.45
+# look for IPv4 Address under WiFi adapter, e.g. 192.168.1.45
 ```
-Then on mobile open:
+Open on mobile:
 ```
 http://192.168.1.45:8000
 ```
 
----
-
-## Step 7 — Share Outside Your Network (ngrok)
-
-Install ngrok once:
-```powershell
-winget install Ngrok.Ngrok
-```
-
-Sign up free at [ngrok.com](https://ngrok.com), copy your authtoken, then:
-```powershell
-ngrok config add-authtoken YOUR_TOKEN_HERE
-```
-
-Run alongside uvicorn in a separate terminal:
-```powershell
-ngrok http 8000
-```
-
-Share the `https://xxx.ngrok-free.app` URL. To skip the ngrok interstitial page append:
-```
-?ngrok-skip-browser-warning=true
-```
+**Outside your network** — use ngrok (above).
 
 ---
 
-## Switching Photo Collections
+## Manage the Index
 
-Update `photos_dir` in `config/config.yaml`, then run:
+Whenever your photo collection changes:
 
 ```powershell
+venv\Scripts\activate
 python scripts/build_index.py
-# choose option 2 (Rebuild from scratch)
 ```
+
+| Scenario | Option |
+|---|---|
+| Added new photos | 1 |
+| Deleted photos | 3 |
+| Changed photo folder path | 2 |
+| Just want to check status | 4 |
 
 ---
 
@@ -158,21 +137,30 @@ To pull photos from OneDrive instead of local disk:
 
 ---
 
+## ngrok Setup (one-time)
+
+```powershell
+winget install Ngrok.Ngrok
+```
+
+Sign up free at [ngrok.com](https://ngrok.com), copy your authtoken:
+```powershell
+ngrok config add-authtoken YOUR_TOKEN_HERE
+```
+
+After that just run `ngrok http 8000` anytime.
+
+---
+
 ## API Endpoints
 
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET` | `/` | Web UI |
 | `POST` | `/search` | Upload a face photo, get matches |
-| `POST` | `/reload-index` | Hot-reload index without restarting |
+| `POST` | `/reload-index` | Hot-reload index without restarting server |
 | `GET` | `/health` | Server status + indexed face count |
 | `GET` | `/photo?path=...` | Serve a matched photo by path |
-
-### Search via curl
-
-```powershell
-curl -X POST http://localhost:8000/search -F "file=@C:\path\to\photo.jpg"
-```
 
 ---
 
@@ -181,7 +169,7 @@ curl -X POST http://localhost:8000/search -F "file=@C:\path\to\photo.jpg"
 | Error | Fix |
 |---|---|
 | `photos_dir is not configured` | Set `paths.photos_dir` in `config/config.yaml` |
-| `No index found` | Run `python scripts/build_index.py` first |
+| `No index found` | Run `python scripts/build_index.py` → option 1 |
 | `No face detected` | Uploaded image has no detectable face |
 | `Directory 'static' does not exist` | Run uvicorn from the project root folder |
 | `OneDrive not authenticated` | Run `python scripts/onedrive_auth.py` |
