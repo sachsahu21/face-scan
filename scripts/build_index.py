@@ -1,17 +1,16 @@
 """
-Build or update the face embeddings index.
+Face index manager — interactive menu.
 
 Usage:
-  python scripts/build_index.py           # incremental (skip already-indexed)
-  python scripts/build_index.py --force   # rebuild from scratch
+  python scripts/build_index.py
 """
 import sys
 import logging
-import argparse
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import numpy as np
 import config
 from app.core.indexer import build_index
 from app.sources.local import LocalPhotoSource
@@ -19,19 +18,103 @@ from app.sources.onedrive import OneDrivePhotoSource
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--force', action='store_true', help='Rebuild index from scratch')
-args = parser.parse_args()
 
-if config.SOURCE_TYPE == 'onedrive':
-    source = OneDrivePhotoSource(
-        client_id=config.ONEDRIVE_CLIENT_ID,
-        tenant_id=config.ONEDRIVE_TENANT_ID,
-        folder=config.ONEDRIVE_FOLDER,
-        token_cache_path=config.TOKEN_CACHE_PATH,
-    )
-else:
-    source = LocalPhotoSource(config.PHOTOS_DIR)
+def get_source():
+    if config.SOURCE_TYPE == 'onedrive':
+        return OneDrivePhotoSource(
+            client_id=config.ONEDRIVE_CLIENT_ID,
+            tenant_id=config.ONEDRIVE_TENANT_ID,
+            folder=config.ONEDRIVE_FOLDER,
+            token_cache_path=config.TOKEN_CACHE_PATH,
+        )
+    return LocalPhotoSource(config.PHOTOS_DIR)
 
-total = build_index(source, config.INDEX_PATH, force=args.force)
-print(f"\nDone. {total} faces indexed → {config.INDEX_PATH}")
+
+def show_status():
+    index_path = Path(config.INDEX_PATH)
+    if not index_path.exists():
+        print("  No index found. Run option 1 to build it.")
+        return
+    data = np.load(index_path, allow_pickle=True)
+    image_ids = list(data['image_ids'])
+    alive  = sum(1 for p in image_ids if Path(p).exists())
+    dead   = len(image_ids) - alive
+    size   = index_path.stat().st_size / 1024
+    print(f"  Index     : {index_path}")
+    print(f"  Faces     : {len(image_ids)} total  |  {alive} photos exist  |  {dead} deleted")
+    print(f"  Size      : {size:.1f} KB")
+    print(f"  Photos dir: {config.PHOTOS_DIR}")
+
+
+def purge_deleted():
+    """Remove index entries whose source file no longer exists."""
+    index_path = Path(config.INDEX_PATH)
+    if not index_path.exists():
+        print("No index found.")
+        return
+    data = np.load(index_path, allow_pickle=True)
+    embeddings = list(data['embeddings'])
+    image_ids  = list(data['image_ids'])
+
+    before = len(image_ids)
+    pairs  = [(e, i) for e, i in zip(embeddings, image_ids) if Path(i).exists()]
+    if not pairs:
+        print("No entries remain after purge — index would be empty. Aborting.")
+        return
+
+    kept_emb, kept_ids = zip(*pairs)
+    np.savez(index_path,
+             embeddings=np.array(kept_emb, dtype=np.float32),
+             image_ids=np.array(kept_ids))
+    removed = before - len(kept_ids)
+    print(f"  Removed {removed} stale entries. Index now has {len(kept_ids)} faces.")
+
+
+MENU = """
+╔══════════════════════════════════════╗
+║        Face Index Manager            ║
+╠══════════════════════════════════════╣
+║  1 - Add new photos (incremental)    ║
+║  2 - Rebuild index from scratch      ║
+║  3 - Remove deleted photos from index║
+║  4 - Show index status               ║
+║  0 - Exit                            ║
+╚══════════════════════════════════════╝
+"""
+
+print(MENU)
+while True:
+    choice = input("Select option: ").strip()
+
+    if choice == '1':
+        print("\nScanning for new photos...")
+        total = build_index(get_source(), config.INDEX_PATH, force=False)
+        print(f"Done. {total} faces in index.\n")
+
+    elif choice == '2':
+        confirm = input("This will delete and rebuild the entire index. Confirm? (y/n): ").strip().lower()
+        if confirm == 'y':
+            print("\nRebuilding index from scratch...")
+            total = build_index(get_source(), config.INDEX_PATH, force=True)
+            print(f"Done. {total} faces in index.\n")
+        else:
+            print("Cancelled.\n")
+
+    elif choice == '3':
+        print("\nRemoving deleted photo entries...")
+        purge_deleted()
+        print()
+
+    elif choice == '4':
+        print()
+        show_status()
+        print()
+
+    elif choice == '0':
+        print("Bye.")
+        sys.exit(0)
+
+    else:
+        print("Invalid option. Enter 0–4.\n")
+
+    print(MENU)

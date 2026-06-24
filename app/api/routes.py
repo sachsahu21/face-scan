@@ -36,7 +36,7 @@ async def search(file: UploadFile = File(...)):
     if emb is None:
         raise HTTPException(status_code=422, detail="No face detected in the uploaded image")
 
-    results = searcher.search(emb)
+    results = [r for r in searcher.search(emb) if Path(r["image_id"]).exists()]
     return {"results": results, "total": len(results)}
 
 

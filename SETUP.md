@@ -55,13 +55,22 @@ Copy-Item .env.example .env
 python scripts/build_index.py
 ```
 
-Scans all photos, detects faces, saves index to `data/face_index.npz`.
+An interactive menu opens:
 
-To rebuild from scratch:
-
-```powershell
-python scripts/build_index.py --force
 ```
+║  1 - Add new photos (incremental)    ║
+║  2 - Rebuild index from scratch      ║
+║  3 - Remove deleted photos from index║
+║  4 - Show index status               ║
+║  0 - Exit                            ║
+```
+
+| Option | When to use |
+|---|---|
+| 1 | Added new photos to your folder |
+| 2 | Moved/renamed the folder, or something looks wrong |
+| 3 | Deleted photos and want to clean the index |
+| 4 | Check how many faces are indexed |
 
 ---
 
@@ -118,10 +127,11 @@ Share the `https://xxx.ngrok-free.app` URL. To skip the ngrok interstitial page 
 
 ## Switching Photo Collections
 
-Update `photos_dir` in `config/config.yaml` and re-index:
+Update `photos_dir` in `config/config.yaml`, then run:
 
 ```powershell
-python scripts/build_index.py --force
+python scripts/build_index.py
+# choose option 2 (Rebuild from scratch)
 ```
 
 ---
