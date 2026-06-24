@@ -41,8 +41,12 @@ class OneDrivePhotoSource(PhotoSource):
         import msal
 
         cache = msal.SerializableTokenCache()
+
+        # Load token: file on disk (local) → env var (cloud/HF Spaces)
         if self.token_cache_path.exists():
             cache.deserialize(self.token_cache_path.read_text())
+        elif os.getenv('ONEDRIVE_TOKEN_CACHE'):
+            cache.deserialize(os.getenv('ONEDRIVE_TOKEN_CACHE'))
 
         self._app = msal.PublicClientApplication(
             client_id,
@@ -60,7 +64,8 @@ class OneDrivePhotoSource(PhotoSource):
 
         raise RuntimeError(
             "OneDrive not authenticated.\n"
-            "Run: python scripts/onedrive_auth.py"
+            "Local:  python scripts/onedrive_auth.py\n"
+            "Cloud:  set ONEDRIVE_TOKEN_CACHE secret in HF Space settings"
         )
 
     def _save_cache(self, cache):

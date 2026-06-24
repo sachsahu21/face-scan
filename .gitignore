@@ -5,6 +5,7 @@ config/*.local.yaml
 # ── App artifacts (index, token cache) ───────────────────────────────────────
 data/
 *.npz
+*.bin
 
 # ── Personal photos ───────────────────────────────────────────────────────────
 photos/
