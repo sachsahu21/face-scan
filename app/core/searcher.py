@@ -17,10 +17,10 @@ class FaceSearcher:
     def _load(self, index_path: Path):
         path = Path(index_path)
         if not path.exists():
-            raise FileNotFoundError(
-                f"No index found at {index_path}\n"
-                "Run:  python scripts/build_index.py"
-            )
+            logger.warning(f"No index found at {index_path} — starting with empty index")
+            self.embeddings = None
+            self.image_ids = np.array([])
+            return
         data = np.load(path, allow_pickle=True)
         self.embeddings = data['embeddings'].astype(np.float32)  # (N, 512)
         self.image_ids = data['image_ids']

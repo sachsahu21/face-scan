@@ -38,7 +38,7 @@ def _get_token(client_id: str, tenant_id: str) -> str | None:
         return None
 
     result = app.acquire_token_silent(
-        scopes=["https://graph.microsoft.com/Files.ReadWrite"],
+        scopes=["Files.ReadWrite"],
         account=accounts[0],
     )
     if not result or "access_token" not in result:
