@@ -1,0 +1,62 @@
+# =============================================================
+#  Face Scan — Application Configuration
+#  Edit values here. Secrets and machine-specific paths should
+#  go in .env (env vars override these values).
+# =============================================================
+
+
+# -------------------------------------------------------------
+# PATHS
+# root_dir : where app artifacts live (index, cache, static).
+#            Leave blank to use the project folder.
+#            Override in .env:  ROOT_DIR=D:\FaceData
+#
+# photos_dir : your photo collection — independent of root_dir,
+#              changes freely. REQUIRED (set here or in .env).
+#              Override in .env:  PHOTOS_DIR=D:\Photos\2024
+# -------------------------------------------------------------
+paths:
+  root_dir: "C:\\Users\\ISSUser\\Desktop\\Sachin\\hdd\\face_scan_artifacts"
+  photos_dir: "C:\\Users\\ISSUser\\Desktop\\Sachin\\hdd\\pic\\Sachin\\0.Engagement n Wedding\\Wedding\\Album"
+
+  # Sub-paths under root_dir (relative, or absolute to override)
+  data_dir:         data
+  index_path:       data/face_index.npz
+  token_cache_path: data/.onedrive_token_cache.bin
+
+
+# -------------------------------------------------------------
+# SOURCE
+# type: "local"    → read photos from photos_dir on disk
+#       "onedrive" → read photos from OneDrive (fill credentials)
+# -------------------------------------------------------------
+source:
+  type: onedrive
+
+  onedrive:
+    client_id: "c34d658b-cda4-49b6-bbb1-bea196686393"
+    tenant_id: consumers
+    folder: /Camera/face_scan
+    # OneDrive path where face_index.npz is stored (upload_index.py writes here)
+    index_path: /FaceScanIndex/face_index.npz
+
+
+# -------------------------------------------------------------
+# SEARCH
+# threshold : cosine similarity cutoff (0.0–1.0)
+#             higher = stricter match, fewer results
+# max_results : cap on results returned per search
+# -------------------------------------------------------------
+search:
+  threshold: 0.35
+  max_results: 20
+
+
+# -------------------------------------------------------------
+# SERVER
+# tunnel_mode: set true to expose via ngrok (outside local network)
+# -------------------------------------------------------------
+server:
+  host: 0.0.0.0
+  port: 8000
+  tunnel_mode: false

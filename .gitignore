@@ -1,0 +1,42 @@
+# ── Secrets & local config ────────────────────────────────────────────────────
+.env
+config/*.local.yaml
+
+# ── App artifacts (index, token cache) ───────────────────────────────────────
+data/
+*.npz
+*.bin
+
+# ── Personal photos ───────────────────────────────────────────────────────────
+photos/
+projects/
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# ── AI tool config (auto-generated, machine-specific) ────────────────────────
+.agents/
+.jetro/
+.cursor/
+.claude/
+.github/copilot-instructions.md
+.mcp.json
+.windsurfrules
+AGENT.md
+CLAUDE.md
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
