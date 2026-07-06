@@ -20,7 +20,6 @@ Optional:
 import logging
 import os
 import sys
-import json
 from pathlib import Path
 
 logging.basicConfig(
@@ -160,16 +159,18 @@ def main():
     tmp_cache = Path(tempfile.mktemp(suffix=".json"))
     tmp_cache.write_text(cache_json)
 
-    source = OneDrivePhotoSource(
-        client_id=client_id,
-        tenant_id=tenant_id,
-        folder=onedrive_folder,
-        token_cache_path=tmp_cache,
-    )
+    try:
+        source = OneDrivePhotoSource(
+            client_id=client_id,
+            tenant_id=tenant_id,
+            folder=onedrive_folder,
+            token_cache_path=tmp_cache,
+        )
+        total = build_index(source, local_index, force=force_rebuild)
+    finally:
+        tmp_cache.unlink(missing_ok=True)
 
-    total = build_index(source, local_index, force=force_rebuild)
     log.info(f"Index built: {total} faces")
-    tmp_cache.unlink(missing_ok=True)
 
     if total == 0:
         log.warning("No faces found — skipping upload")

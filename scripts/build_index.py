@@ -40,10 +40,18 @@ def upload_to_onedrive():
         authority=f"https://login.microsoftonline.com/{config.ONEDRIVE_TENANT_ID}",
         token_cache=cache,
     )
+    accounts = app.get_accounts()
+    if not accounts:
+        print("  No accounts in token cache — run python scripts/onedrive_auth.py first.")
+        return
     result = app.acquire_token_silent(
-        scopes=["https://graph.microsoft.com/Files.ReadWrite"],
-        account=app.get_accounts()[0],
+        scopes=["Files.ReadWrite"],
+        account=accounts[0],
     )
+    if not result or "access_token" not in result:
+        err = result.get("error_description", str(result)) if result else "None"
+        print(f"  Token refresh failed: {err}")
+        return
     token = result["access_token"]
     if cache.has_state_changed:
         config.TOKEN_CACHE_PATH.write_text(cache.serialize())
@@ -74,17 +82,26 @@ def show_status():
         return
     data = np.load(index_path, allow_pickle=True)
     image_ids = list(data['image_ids'])
-    alive  = sum(1 for p in image_ids if Path(p).exists())
-    dead   = len(image_ids) - alive
-    size   = index_path.stat().st_size / 1024
+    size = index_path.stat().st_size / 1024
     print(f"  Index     : {index_path}")
-    print(f"  Faces     : {len(image_ids)} total  |  {alive} photos exist  |  {dead} deleted")
+    print(f"  Faces     : {len(image_ids)} total")
     print(f"  Size      : {size:.1f} KB")
-    print(f"  Photos dir: {config.PHOTOS_DIR}")
+    if config.SOURCE_TYPE == 'onedrive':
+        print(f"  Source    : OneDrive {config.ONEDRIVE_FOLDER}")
+    else:
+        alive = sum(1 for p in image_ids if Path(p).exists())
+        dead  = len(image_ids) - alive
+        print(f"  Photos    : {alive} exist  |  {dead} deleted")
+        print(f"  Photos dir: {config.PHOTOS_DIR}")
 
 
 def purge_deleted():
-    """Remove index entries whose source file no longer exists."""
+    """Remove index entries whose source file no longer exists (local mode only)."""
+    if config.SOURCE_TYPE == 'onedrive':
+        print("  Purge is not supported in OneDrive mode — item IDs cannot be checked locally.")
+        print("  Use option 4 (Rebuild from scratch) to refresh the index.")
+        return
+
     index_path = Path(config.INDEX_PATH)
     if not index_path.exists():
         print("No index found.")
@@ -121,57 +138,63 @@ MENU = """
 ╚════════════════════════════════════════════════╝
 """
 
-print(MENU)
-while True:
-    choice = input("Select option: ").strip()
 
-    if choice == '1':
-        print("\nScanning for new photos...")
-        total = build_index(get_source(), config.INDEX_PATH, force=False)
-        print(f"Done. {total} faces in index.\n")
+def run_menu():
+    print(MENU)
+    while True:
+        choice = input("Select option: ").strip()
 
-    elif choice == '2':
-        print("\nScanning for new photos...")
-        total = build_index(get_source(), config.INDEX_PATH, force=False)
-        print(f"Done. {total} faces in index.")
-        upload_to_onedrive()
-        print()
-
-    elif choice == '3':
-        confirm = input("This will delete and rebuild the entire index. Confirm? (y/n): ").strip().lower()
-        if confirm == 'y':
-            print("\nRebuilding index from scratch...")
-            total = build_index(get_source(), config.INDEX_PATH, force=True)
+        if choice == '1':
+            print("\nScanning for new photos...")
+            total = build_index(get_source(), config.INDEX_PATH, force=False)
             print(f"Done. {total} faces in index.\n")
-        else:
-            print("Cancelled.\n")
 
-    elif choice == '4':
-        confirm = input("This will delete and rebuild the entire index. Confirm? (y/n): ").strip().lower()
-        if confirm == 'y':
-            print("\nRebuilding index from scratch...")
-            total = build_index(get_source(), config.INDEX_PATH, force=True)
+        elif choice == '2':
+            print("\nScanning for new photos...")
+            total = build_index(get_source(), config.INDEX_PATH, force=False)
             print(f"Done. {total} faces in index.")
             upload_to_onedrive()
             print()
+
+        elif choice == '3':
+            confirm = input("This will delete and rebuild the entire index. Confirm? (y/n): ").strip().lower()
+            if confirm == 'y':
+                print("\nRebuilding index from scratch...")
+                total = build_index(get_source(), config.INDEX_PATH, force=True)
+                print(f"Done. {total} faces in index.\n")
+            else:
+                print("Cancelled.\n")
+
+        elif choice == '4':
+            confirm = input("This will delete and rebuild the entire index. Confirm? (y/n): ").strip().lower()
+            if confirm == 'y':
+                print("\nRebuilding index from scratch...")
+                total = build_index(get_source(), config.INDEX_PATH, force=True)
+                print(f"Done. {total} faces in index.")
+                upload_to_onedrive()
+                print()
+            else:
+                print("Cancelled.\n")
+
+        elif choice == '5':
+            print("\nRemoving deleted photo entries...")
+            purge_deleted()
+            print()
+
+        elif choice == '6':
+            print()
+            show_status()
+            print()
+
+        elif choice == '0':
+            print("Bye.")
+            sys.exit(0)
+
         else:
-            print("Cancelled.\n")
+            print("Invalid option. Enter 0–6.\n")
 
-    elif choice == '5':
-        print("\nRemoving deleted photo entries...")
-        purge_deleted()
-        print()
+        print(MENU)
 
-    elif choice == '6':
-        print()
-        show_status()
-        print()
 
-    elif choice == '0':
-        print("Bye.")
-        sys.exit(0)
-
-    else:
-        print("Invalid option. Enter 0–6.\n")
-
-    print(MENU)
+if __name__ == "__main__":
+    run_menu()

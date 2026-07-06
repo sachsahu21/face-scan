@@ -17,13 +17,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+MAX_UPLOAD_BYTES = 20 * 1024 * 1024  # 20 MB
+
 # Index is small and fast to load — keep eager load at startup.
 searcher = FaceSearcher(config.INDEX_PATH, config.SEARCH_THRESHOLD, config.MAX_RESULTS)
+_searcher_lock = threading.RLock()
 
 # Model is ~300 MB; load lazily on first request so the server becomes healthy
 # immediately and the first real search pays the init cost.
 _face_model = None
 _model_lock = threading.Lock()
+
+# OneDrive source singleton — one MSAL app for all /photo requests.
+_onedrive_src = None
+_onedrive_src_lock = threading.Lock()
 
 
 def _get_model():
@@ -36,6 +43,21 @@ def _get_model():
                 _face_model = get_face_model()
                 logger.info(f"Face model ready in {time.perf_counter() - t0:.1f}s")
     return _face_model
+
+
+def _get_onedrive_src():
+    global _onedrive_src
+    if _onedrive_src is None:
+        with _onedrive_src_lock:
+            if _onedrive_src is None:
+                from app.sources.onedrive import OneDrivePhotoSource
+                _onedrive_src = OneDrivePhotoSource(
+                    client_id=config.ONEDRIVE_CLIENT_ID,
+                    tenant_id=config.ONEDRIVE_TENANT_ID,
+                    folder=config.ONEDRIVE_FOLDER,
+                    token_cache_path=config.TOKEN_CACHE_PATH,
+                )
+    return _onedrive_src
 
 
 @router.get("/")
@@ -54,7 +76,10 @@ def warmup():
 async def search(file: UploadFile = File(...)):
     t_start = time.perf_counter()
 
-    data = await file.read()
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Upload too large (max 20 MB)")
+
     arr = np.frombuffer(data, np.uint8)
     img = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     if img is None:
@@ -67,7 +92,8 @@ async def search(file: UploadFile = File(...)):
     if emb is None:
         raise HTTPException(status_code=422, detail="No face detected in the uploaded image")
 
-    raw_results = searcher.search(emb)
+    with _searcher_lock:
+        raw_results = searcher.search(emb)
     t_search = time.perf_counter()
 
     # For local source, drop results whose file no longer exists on disk.
@@ -90,13 +116,16 @@ async def search(file: UploadFile = File(...)):
 
 @router.post("/reload-index")
 def reload_index():
-    searcher.reload(config.INDEX_PATH)
-    return {"status": "ok", "indexed": int(len(searcher.image_ids))}
+    with _searcher_lock:
+        searcher.reload(config.INDEX_PATH)
+        count = int(len(searcher.image_ids)) if searcher.image_ids is not None else 0
+    return {"status": "ok", "indexed": count}
 
 
 @router.get("/health")
 def health():
-    count = int(len(searcher.image_ids)) if searcher.image_ids is not None else 0
+    with _searcher_lock:
+        count = int(len(searcher.image_ids)) if searcher.image_ids is not None else 0
     return {"status": "ok", "indexed_faces": count, "model_loaded": _face_model is not None}
 
 
@@ -107,13 +136,7 @@ def serve_photo(path: str):
     OneDrive mode → redirect browser to OneDrive thumbnail CDN URL (no proxying).
     """
     if config.SOURCE_TYPE == "onedrive":
-        from app.sources.onedrive import OneDrivePhotoSource
-        src = OneDrivePhotoSource(
-            client_id=config.ONEDRIVE_CLIENT_ID,
-            tenant_id=config.ONEDRIVE_TENANT_ID,
-            folder=config.ONEDRIVE_FOLDER,
-            token_cache_path=config.TOKEN_CACHE_PATH,
-        )
+        src = _get_onedrive_src()
         url = src.get_display_url(path)
         if not url:
             raise HTTPException(status_code=404, detail="Photo not available")

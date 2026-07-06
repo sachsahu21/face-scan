@@ -52,7 +52,6 @@ def download_index(token: str, onedrive_path: str, local_path: Path) -> bool:
     """Download a file from OneDrive by its path. Returns True on success."""
     import requests
 
-    encoded = onedrive_path.replace("/", ":")[1:]  # /a/b → a:b (Graph path syntax)
     url = f"https://graph.microsoft.com/v1.0/me/drive/root:/{onedrive_path}:/content"
     headers = {"Authorization": f"Bearer {token}"}
 

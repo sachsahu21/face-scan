@@ -88,7 +88,7 @@ class OneDrivePhotoSource(PhotoSource):
             params = {'$top': 1000, '$select': 'id,name,file,folder'}
 
             while url:
-                r = requests.get(url, headers=self._headers(), params=params)
+                r = requests.get(url, headers=self._headers(), params=params, timeout=60)
                 r.raise_for_status()
                 data = r.json()
                 for item in data.get('value', []):
@@ -110,6 +110,7 @@ class OneDrivePhotoSource(PhotoSource):
         r = requests.get(
             f"{GRAPH_BASE}/me/drive/items/{image_id}/content",
             headers=self._headers(),
+            timeout=30,
         )
         r.raise_for_status()
         return cv2.imdecode(np.frombuffer(r.content, np.uint8), cv2.IMREAD_COLOR)
@@ -120,6 +121,7 @@ class OneDrivePhotoSource(PhotoSource):
         r = requests.get(
             f"{GRAPH_BASE}/me/drive/items/{image_id}/thumbnails/0/large",
             headers=self._headers(),
+            timeout=15,
         )
         r.raise_for_status()
         return r.json()['url']

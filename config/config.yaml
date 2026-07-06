@@ -16,8 +16,8 @@
 #              Override in .env:  PHOTOS_DIR=D:\Photos\2024
 # -------------------------------------------------------------
 paths:
-  root_dir: "C:\\Users\\ISSUser\\Desktop\\Sachin\\hdd\\face_scan_artifacts"
-  photos_dir: "C:\\Users\\ISSUser\\Desktop\\Sachin\\hdd\\pic\\Sachin\\0.Engagement n Wedding\\Wedding\\Album"
+  root_dir: ""
+  photos_dir: ""
 
   # Sub-paths under root_dir (relative, or absolute to override)
   data_dir:         data
@@ -34,7 +34,7 @@ source:
   type: onedrive
 
   onedrive:
-    client_id: "c34d658b-cda4-49b6-bbb1-bea196686393"
+    client_id: ""
     tenant_id: consumers
     folder: /Camera/face_scan
     # OneDrive path where face_index.npz is stored (upload_index.py writes here)
