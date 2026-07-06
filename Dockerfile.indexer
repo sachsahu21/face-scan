@@ -1,0 +1,24 @@
+FROM python:3.11-slim
+
+# InsightFace needs gcc + OpenCV system libs
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    libgomp1 \
+    gcc \
+    g++ \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+# The job reads all config from env vars — no .env file needed
+# Required: ONEDRIVE_TOKEN_CACHE, ONEDRIVE_CLIENT_ID
+# Optional: ONEDRIVE_TENANT_ID, ONEDRIVE_FOLDER, ONEDRIVE_INDEX_PATH, SPACE_URL, FORCE_REBUILD
+
+CMD ["python", "scripts/run_index_job.py"]
