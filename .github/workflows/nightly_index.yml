@@ -1,0 +1,39 @@
+name: Nightly Face Index Rebuild
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 2:00 AM UTC = 7:30 AM IST
+  workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: 'Rebuild from scratch (ignores existing index)'
+        type: boolean
+        default: false
+
+jobs:
+  build-index:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run index job
+        env:
+          ONEDRIVE_CLIENT_ID:   ${{ secrets.ONEDRIVE_CLIENT_ID }}
+          ONEDRIVE_TENANT_ID:   ${{ secrets.ONEDRIVE_TENANT_ID }}
+          ONEDRIVE_FOLDER:      ${{ secrets.ONEDRIVE_FOLDER }}
+          ONEDRIVE_INDEX_PATH:  ${{ secrets.ONEDRIVE_INDEX_PATH }}
+          ONEDRIVE_TOKEN_CACHE: ${{ secrets.ONEDRIVE_TOKEN_CACHE }}
+          SPACE_URL:            ${{ secrets.SPACE_URL }}
+          FORCE_REBUILD:        ${{ github.event.inputs.force_rebuild == 'true' && '1' || '0' }}
+          INDEX_PATH:           /tmp/face_index.npz
+        run: python scripts/run_index_job.py
